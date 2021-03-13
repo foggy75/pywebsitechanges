@@ -4,15 +4,15 @@ A simple python script to email you whenever a website changes.
 
 ## Install
 
-First install Node and Python on your system if you don't already. Then you will need the required packages which can be installed with `pip`:
+First install Node and Python 3.x on your system if you don't have it already. Then you will need the required packages which can be installed with `pip`:
 
-	pip install click numpy loguru scikit-image opencv-python
+	python3 -m pip install click numpy loguru scikit-image opencv-python
 
 Then get the script:
 
-	wget https://raw.githubusercontent.com/schollz/websitechanges/master/websitechanges.py
+	wget https://raw.githubusercontent.com/foggy75/pywebsitechanges/master/websitechanges.py
 
-And now run it whever - in a folder, in a cron, etc.
+And now run it wherever - in a folder, in a cron, etc.
 
 ## Usage
 
@@ -34,7 +34,7 @@ The `url` is the specified URL.
 
 The `folder` specifies where to store all the data and puppeteer information.
 
-The `css` will take a CSS query for a specific element you want to view. Otherwise it will capture the whole page.
+The `css` will take a CSS query for a specific element you want to view. If omitted, it will capture the whole page. Puppeteer allows to use either [css selectors](https://www.w3schools.com/cssref/css_selectors.asp) or xpath syntax.
 
 To be alerted you will need to set `to` (the email to alert), `smtpemail` (the email sign-in for the SMTP), and `smtppass` (the password for the SMTP). You can easily setup a Gmail account to be used as an SMTP provider. 
 
@@ -48,7 +48,16 @@ This will automatically download puppeteer, which is used to gather the screensh
 
 Every alert will send you an image of the latest image, in low quality JPEG format in order to save on bandwidth.
 
-Each time the script will only run once, so you will need to set up a cron job or a for loop to keep it continually running.
+Each time the script will only run once, so you will need to set up a cron job or a loop in a script to keep it continually running:
+```
+#!/bin/bash
+
+while [ 1 ]
+do
+	python3 websitechanges.py --url SOMEURL
+	sleep 30m
+done
+```
 
 ## License
 
