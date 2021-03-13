@@ -62,7 +62,47 @@ for (var i = 0; i < hostFile.length; i++) {
     page.setViewport({ width: 1000, height: 1000, deviceScaleFactor: 1 });
 
     await page.goto(process.argv[2], { waitUntil: 'networkidle2' });
-    await page.waitFor(5000);
+    // get rid of cookie consent pop-ups
+    // thanks to: https://stackoverflow.com/questions/59618456/pupeteer-how-can-i-accept-cookie-consent-prompts-automatically-for-any-url
+    await page.evaluate(_ => {
+        var xcc
+        // ids
+        var xcc_id = [
+            'cookie-apply-all',
+            'cookie-settings-all',
+            // add ids here
+        ];
+        for (let i = 0; i < xcc_id.length; i++) {
+            xcc = document.getElementById(xcc_id[i]);
+            if (xcc != null) {
+                xcc.click();
+            }
+        }
+        // classes
+        var xcc_class = [
+            'accept-all',
+            'accept-cookies-button',
+            'avia-cookie-select-all',
+            'js-confirm-button',
+            // add classes here
+        ];
+        for (let i = 0; i < xcc_class.length; i++) {
+            xcc = document.getElementsByClassName(xcc_class[i]);
+            if (xcc != null && xcc.length != 0) {
+                xcc[0].click();
+            }
+        }
+    
+        // custom data attributes
+        xcc = document.querySelectorAll('button[name=accept_cookie]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
+        xcc = document.querySelectorAll('[data-cookieman-accept-all]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
+
+         // hide iframes, can't eval
+        xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length != 0) { xcc[0].style.display = 'none'; }
+        xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length > 1) { xcc[1].style.display = 'none'; }
+    
+    });
+    await page.waitForTimeout(5000);
 
     if (process.argv[4] == 'full') {
         await page.screenshot({
@@ -111,7 +151,7 @@ for (var i = 0; i < hostFile.length; i++) {
     await screenshotDOMElement({
         path: process.argv[3],
         selector: process.argv[4],
-        padding: 16
+        padding: 0
     });
 
     browser.close();
