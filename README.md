@@ -25,14 +25,15 @@ Options:
   --folder TEXT      directory to store data
   --css TEXT         CSS selector of element to watch, default full page
   --to TEXT          email address of person to alert
-  --smtpemail TEXT   SMTP email address
-  --smtppass TEXT    SMTP email password
-  --threshold FLOAT  threshold for sending email
+  --smtpemail TEXT   SMTP gmail email address
+  --smtppass TEXT    SMTP gmail password (use an app password)
+  --threshold FLOAT  threshold before sending email (result ranges from 0.0 to 1.0)
+  --tag              tag to use in the email subject
 ```
 
 The `url` is the specified URL.
 
-The `folder` specifies where to store all the data and puppeteer information.
+The `folder` specifies where to store all the data and puppeteer information. This location will also be used to store the puppeteer and chromium headless packages.
 
 The `css` will take a CSS query for a specific element you want to view. If omitted, it will capture the whole page. Puppeteer allows to use either [css selectors](https://www.w3schools.com/cssref/css_selectors.asp) or xpath syntax.
 
@@ -49,7 +50,7 @@ This will automatically download puppeteer, which is used to gather the screensh
 Every alert will send you an image of the latest image, in low quality JPEG format in order to save on bandwidth.
 
 Each time the script will only run once, so you will need to set up a cron job or a loop in a script to keep it continually running:
-```
+```bash
 #!/bin/bash
 
 while [ 1 ]

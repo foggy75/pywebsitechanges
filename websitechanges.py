@@ -6,6 +6,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import urllib.request
+from urllib.parse import urlparse
 
 # install with
 # python3 -m pip install click numpy loguru scikit-image opencv-python
@@ -244,7 +245,8 @@ def send_email(smtpemail, smtppass, to, subject, body, imgname):
 @click.option("--smtpemail", default="", help="SMTP email address")
 @click.option("--smtppass", default="", help="SMTP email password")
 @click.option("--threshold", default=1.0, help="threshold for sending email")
-def run(folder, url, css, to, smtpemail, smtppass, threshold):
+@click.option("--tag", default="", help="tag to be used in email header")
+def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
     logger.debug("changing dir to {}", folder)
     os.chdir(folder)
     with open("index.js", "w") as f:
@@ -263,13 +265,16 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold):
         similarity = compare_images("last.png", "new.png")
         logger.debug("similarity: {}", similarity)
         if similarity < threshold and smtpemail != "" and smtppass != "" and to != "":
-            logger.debug("similarity < 0.99, sending email")
+            logger.debug("similarity < " + str(threshold) + ", sending email")
             logger.debug(os.path.join(os.path.abspath("."), "after.jpg"))
+            if not tag:
+                tag = urlparse(url).netloc
+            subj = "Change detected for " + tag + " @ " + datetime.now().strftime("%m/%d/%Y %H:%M")
             send_email(
                 smtpemail,
                 smtppass,
                 to,
-                "web change " + datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
+                subj,
                 url,
                 os.path.join(os.path.abspath("."), "after.jpg"),
             )
