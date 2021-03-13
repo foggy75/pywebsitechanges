@@ -160,9 +160,9 @@ for (var i = 0; i < hostFile.length; i++) {
 """
 
 
-def compare_images(img1, img2):
-    before = cv2.imread(img1)
-    after = cv2.imread(img2)
+def compare_images(previous, current, result):
+    before = cv2.imread(previous)
+    after = cv2.imread(current)
 
     # Convert images to grayscale
     before_gray = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
@@ -174,7 +174,7 @@ def compare_images(img1, img2):
     except ValueError as e:
         if "{}".format(e) == "Input images must have the same dimensions.":
             # images are different
-            cv2.imwrite("after.jpg", after, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+            cv2.imwrite(result, after, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
             return 0
         else:
             raise e
@@ -205,9 +205,11 @@ def compare_images(img1, img2):
             cv2.drawContours(mask, [c], 0, (0, 255, 0), -1)
             cv2.drawContours(filled_after, [c], 0, (0, 255, 0), -1)
 
-    cv2.imwrite("before" + img1 + img2, before)
-    cv2.imwrite("after" + img1 + img2, after)
-    cv2.imwrite("after.jpg", after, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+    filename = "diff_previous_" + previous
+    cv2.imwrite(filename, before)
+    filename = "diff_current_" + current
+    cv2.imwrite(filename, after)
+    cv2.imwrite(result, after, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
     # cv2.imshow('after', after)
     # cv2.imshow('diff',diff)
     # cv2.imshow('mask',mask)
@@ -257,18 +259,21 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
     if not os.path.exists(os.path.join("hosts")):
         logger.debug("downloading hosts file {}", hostsfile)
         urllib.request.urlretrieve(hostsfile, "hosts")
-    node_cmd = "node index.js " + url + " new.png '" + css + "'"
+    if not tag:
+        tag = urlparse(url).netloc
+    new_png = tag + "_new.png"
+    last_png = tag + "_last.png"
+    after_jpg = tag + "_after.jpg"
+    node_cmd = "node index.js " + url + " " + new_png + " '" + css + "'"
     logger.debug(node_cmd)
     os.system(node_cmd)
-    if os.path.exists("last.png"):
+    if os.path.exists(last_png):
         logger.debug("comparing images")
-        similarity = compare_images("last.png", "new.png")
+        similarity = compare_images(last_png, new_png, after_jpg)
         logger.debug("similarity: {}", similarity)
         if similarity < threshold and smtpemail != "" and smtppass != "" and to != "":
             logger.debug("similarity < " + str(threshold) + ", sending email")
-            logger.debug(os.path.join(os.path.abspath("."), "after.jpg"))
-            if not tag:
-                tag = urlparse(url).netloc
+            logger.debug(os.path.join(os.path.abspath("."), after_jpg))
             subj = "Change detected for " + tag + " @ " + datetime.now().strftime("%m/%d/%Y %H:%M")
             send_email(
                 smtpemail,
@@ -276,11 +281,11 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
                 to,
                 subj,
                 url,
-                os.path.join(os.path.abspath("."), "after.jpg"),
+                os.path.join(os.path.abspath("."), after_jpg),
             )
-        os.remove("last.png")
+        os.remove(last_png)
     logger.debug("saving new image")
-    os.rename("new.png", "last.png")
+    os.rename(new_png, last_png)
 
 
 if __name__ == "__main__":
