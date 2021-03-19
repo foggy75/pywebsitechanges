@@ -265,6 +265,7 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
         urllib.request.urlretrieve(hostsfile, "hosts")
     if not tag:
         tag = urlparse(url).netloc
+    logger.debug("using tag: {}", tag)
     new_png = tag + "_new.png"
     last_png = tag + "_last.png"
     after_jpg = tag + "_after.jpg"
