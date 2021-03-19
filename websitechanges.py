@@ -146,6 +146,8 @@ for (var i = 0; i < hostFile.length; i++) {
                 width: rect.width + padding * 2,
                 height: rect.height + padding * 2
             }
+        }).catch((err) => {
+            console.log('await page.screenshot exception caught!');
         });
     }
 
@@ -153,6 +155,8 @@ for (var i = 0; i < hostFile.length; i++) {
         path: process.argv[3],
         selector: process.argv[4],
         padding: 0
+    }).catch((err) => {
+        console.log('await screenshotDOMElement exception caught!');
     });
 
     browser.close();
