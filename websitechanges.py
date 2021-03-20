@@ -252,7 +252,8 @@ def send_email(smtpemail, smtppass, to, subject, body, imgname):
 @click.option("--smtppass", default="", help="SMTP email password")
 @click.option("--threshold", default=1.0, help="threshold for sending email")
 @click.option("--tag", default="", help="tag to be used in email header")
-def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
+@click.option("--doublecheck", is_flag=True, default=False, help="double-check when a new change was detected, to avoid false alarms")
+def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
     logger.debug("changing dir to {}", folder)
     os.chdir(folder)
     with open("index.js", "w") as f:
@@ -265,29 +266,43 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
         urllib.request.urlretrieve(hostsfile, "hosts")
     if not tag:
         tag = urlparse(url).netloc
-    logger.debug("using tag: {}", tag)
+    logger.debug("using tag: {} - doublecheck enabled: {}", tag, str(doublecheck))
     new_png = tag + "_new.png"
     last_png = tag + "_last.png"
     after_jpg = tag + "_after.jpg"
-    node_cmd = "node index.js " + url + " " + new_png + " '" + css + "'"
-    logger.debug(node_cmd)
-    os.system(node_cmd)
+    loopCount = 1
+    if doublecheck:
+        loopCount = 2
+    for x in range(loopCount):
+        node_cmd = "node index.js " + url + " " + new_png + " '" + css + "'"
+        logger.debug(node_cmd)
+        
+        os.system(node_cmd)
+        if os.path.exists(last_png):
+            logger.debug("comparing images")
+            similarity = compare_images(last_png, new_png, after_jpg)
+            logger.debug("similarity: {}", similarity)
+            if similarity < threshold and smtpemail != "" and smtppass != "" and to != "":
+                if doublecheck and x == 0:
+                    # first try, re-check
+                    logger.debug("similarity < " + str(threshold) + ", will double-check")
+                    continue
+                logger.debug("similarity < " + str(threshold) + ", sending email")
+                logger.debug(os.path.join(os.path.abspath("."), after_jpg))
+                subj = "Change detected for " + tag + " @ " + datetime.now().strftime("%m/%d/%Y %H:%M") + " #WebChange"
+                send_email(
+                    smtpemail,
+                    smtppass,
+                    to,
+                    subj,
+                    url,
+                    os.path.join(os.path.abspath("."), after_jpg),
+                )
+            else:
+                # no change, we're done
+                break
+
     if os.path.exists(last_png):
-        logger.debug("comparing images")
-        similarity = compare_images(last_png, new_png, after_jpg)
-        logger.debug("similarity: {}", similarity)
-        if similarity < threshold and smtpemail != "" and smtppass != "" and to != "":
-            logger.debug("similarity < " + str(threshold) + ", sending email")
-            logger.debug(os.path.join(os.path.abspath("."), after_jpg))
-            subj = "Change detected for " + tag + " @ " + datetime.now().strftime("%m/%d/%Y %H:%M")
-            send_email(
-                smtpemail,
-                smtppass,
-                to,
-                subj,
-                url,
-                os.path.join(os.path.abspath("."), after_jpg),
-            )
         os.remove(last_png)
     logger.debug("saving new image")
     os.rename(new_png, last_png)
