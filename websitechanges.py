@@ -97,16 +97,16 @@ for (var i = 0; i < hostFile.length; i++) {
         // custom data attributes
         xcc = document.querySelectorAll('button[name=accept_cookie]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
         xcc = document.querySelectorAll('[data-cookieman-accept-all]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
+        xcc = document.querySelectorAll('div.VfPpkd-RLmnJb'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
 
          // hide iframes, can't eval
         xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length != 0) { xcc[0].style.display = 'none'; }
         xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length > 1) { xcc[1].style.display = 'none'; }
-    
     }).catch((err) => {
         console.log('!!! await cookies exception caught:');
         console.log(err.message);
     });
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(15000);
 
     if (process.argv[4] == 'full') {
         await page.screenshot({
