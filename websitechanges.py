@@ -42,7 +42,8 @@ for (var i = 0; i < hostFile.length; i++) {
 
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
-    await page.setRequestInterception(true)
+    await page.setDefaultNavigationTimeout(0);
+    await page.setRequestInterception(true);
 
     page.on('request', request => {
 
@@ -295,6 +296,7 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
                 if doublecheck and x == 0:
                     # first try, re-check
                     logger.debug("similarity < " + str(threshold) + ", will double-check")
+                    time.sleep(90)
                     continue
                 logger.debug("similarity < " + str(threshold) + ", sending email")
                 logger.debug(os.path.join(os.path.abspath("."), after_jpg))
