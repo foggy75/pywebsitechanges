@@ -301,13 +301,14 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
                 logger.debug("similarity < " + str(threshold) + ", sending email")
                 logger.debug(os.path.join(os.path.abspath("."), after_jpg))
                 subj = "Change detected for " + tag + " @ " + datetime.now().strftime("%m/%d/%Y %H:%M") + " #WebChange"
+                body_txt = url + "\nImage similarity: " + str(similarity) + "\n"
                 send_email(
                     smtpemail,
                     smtppass,
                     to,
                     subj,
-                    url,
-                    os.path.join(os.path.abspath("."), after_jpg),
+                    body_txt,
+                    os.path.join(os.path.abspath("."), after_jpg)
                 )
             else:
                 # no change, we're done
