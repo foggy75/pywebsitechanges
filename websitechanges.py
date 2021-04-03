@@ -102,6 +102,9 @@ for (var i = 0; i < hostFile.length; i++) {
         xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length != 0) { xcc[0].style.display = 'none'; }
         xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length > 1) { xcc[1].style.display = 'none'; }
     
+    }).catch((err) => {
+        console.log('!!! await cookies exception caught:');
+        console.log(err.message);
     });
     await page.waitForTimeout(5000);
 
@@ -147,7 +150,8 @@ for (var i = 0; i < hostFile.length; i++) {
                 height: rect.height + padding * 2
             }
         }).catch((err) => {
-            console.log('await page.screenshot exception caught!');
+            console.log('!!! await page.screenshot exception caught:');
+            console.log(err.message);
         });
     }
 
@@ -156,7 +160,8 @@ for (var i = 0; i < hostFile.length; i++) {
         selector: process.argv[4],
         padding: 0
     }).catch((err) => {
-        console.log('await screenshotDOMElement exception caught!');
+        console.log('!!! await screenshotDOMElement exception caught:');
+        console.log(err.message);
     });
 
     browser.close();
@@ -278,6 +283,10 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
         logger.debug(node_cmd)
         
         os.system(node_cmd)
+        if not os.path.exists(new_png):
+            # no new screenshot; abort
+            logger.debug("Aborting - no new screenshot available to compare!")
+            break
         if os.path.exists(last_png):
             logger.debug("comparing images")
             similarity = compare_images(last_png, new_png, after_jpg)
@@ -304,8 +313,9 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
 
     if os.path.exists(last_png):
         os.remove(last_png)
-    logger.debug("saving new image")
-    os.rename(new_png, last_png)
+    if os.path.exists(new_png):
+        logger.debug("saving new image")
+        os.rename(new_png, last_png)
 
 
 if __name__ == "__main__":
