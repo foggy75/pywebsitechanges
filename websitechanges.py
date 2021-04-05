@@ -1,6 +1,7 @@
 import sys
 import os
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
@@ -139,8 +140,10 @@ for (var i = 0; i < hostFile.length; i++) {
             return { left: x, top: y, width, height, id: element.id };
         }, selector);
 
-        if (!rect)
-            throw Error(`Could not find element that matches selector: ${selector}.`);
+        if (!rect) {
+            await page.screenshot({path, fullPage: true})
+            throw Error(`Could not find element that matches selector: ${opts.selector} - full page captured instead.`);
+        }
 
         return await page.screenshot({
             path,
