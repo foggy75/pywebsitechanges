@@ -76,19 +76,18 @@ for (var i = 0; i < hostFile.length; i++) {
 
     // get rid of cookie consent pop-ups
     // thanks to: https://stackoverflow.com/questions/59618456/pupeteer-how-can-i-accept-cookie-consent-prompts-automatically-for-any-url
+    let clicked = false;
     await page.evaluate(_ => {
         var xcc
         // ids
         var xcc_id = [
             'cookie-apply-all',
             'cookie-settings-all',
+            'widget-vrt-cookiebalk3__button',
             // add ids here
         ];
-        for (let i = 0; i < xcc_id.length; i++) {
-            xcc = document.getElementById(xcc_id[i]);
-            if (xcc != null) {
-                xcc.click();
-            }
+        for (let i = 0; i < xcc_id.length; i++) { xcc = document.getElementById(xcc_id[i]);
+            if (xcc != null) { xcc.click(); clicked = true;}
         }
         // classes
         var xcc_class = [
@@ -98,17 +97,14 @@ for (var i = 0; i < hostFile.length; i++) {
             'js-confirm-button',
             // add classes here
         ];
-        for (let i = 0; i < xcc_class.length; i++) {
-            xcc = document.getElementsByClassName(xcc_class[i]);
-            if (xcc != null && xcc.length != 0) {
-                xcc[0].click();
-            }
+        for (let i = 0; i < xcc_class.length; i++) { xcc = document.getElementsByClassName(xcc_class[i]);
+            if (xcc != null && xcc.length != 0) { xcc[0].click(); clicked = true; }
         }
     
         // custom data attributes
-        xcc = document.querySelectorAll('button[name=accept_cookie]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
-        xcc = document.querySelectorAll('[data-cookieman-accept-all]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
-        xcc = document.querySelectorAll('div.VfPpkd-RLmnJb'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
+        xcc = document.querySelectorAll('button[name=accept_cookie]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); clicked = true; }
+        xcc = document.querySelectorAll('[data-cookieman-accept-all]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); clicked = true; }
+        xcc = document.querySelectorAll('form[action*="consent"]'); if (xcc != null && xcc.length != 0) { xcc[0].submit(); clicked = true; } // youtube consent form
 
          // hide iframes, can't eval
         xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length != 0) { xcc[0].style.display = 'none'; }
@@ -117,7 +113,8 @@ for (var i = 0; i < hostFile.length; i++) {
         console.log('!!! await cookies exception caught:');
         console.log(err.message);
     });
-    await page.waitForTimeout(15000);
+    await page.waitForTimeout(5000);
+    if(clicked) { await page.waitForTimeout(10000); }
 
     if (process.argv[4] == 'full') {
         await page.screenshot({
