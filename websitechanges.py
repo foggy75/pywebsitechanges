@@ -271,6 +271,7 @@ def send_email(smtpemail, smtppass, to, subject, body, imgname):
 @click.option("--tag", default="", help="tag to be used in email header")
 @click.option("--doublecheck", is_flag=True, default=False, help="double-check when a new change was detected, to avoid false alarms")
 def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
+    logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     logger.debug("changing dir to {}", folder)
     os.chdir(folder)
     with open("index.js", "w") as f:
@@ -306,7 +307,7 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
             if similarity < threshold and smtpemail != "" and smtppass != "" and to != "":
                 if doublecheck and x == 0:
                     # first try, re-check
-                    logger.debug("similarity < " + str(threshold) + ", will double-check")
+                    logger.debug(" +++++++++++++++++++++ similarity < " + str(threshold) + ", will double-check +++++++++++++++++++++")
                     time.sleep(90)
                     continue
                 logger.debug("similarity < " + str(threshold) + ", sending email")
