@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+from datetime import timedelta
 import urllib.request
 from urllib.parse import urlparse
 
@@ -279,9 +280,15 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
     if not os.path.exists(os.path.join("node_modules", "puppeteer")):
         logger.debug("installing puppeteer in {}", os.path.abspath("."))
         os.system("npm i puppeteer")
-    if not os.path.exists(os.path.join("hosts")):
+    localhostsfile = os.path.join("hosts")
+    if not os.path.exists(localhostsfile):
         logger.debug("downloading hosts file {}", hostsfile)
         urllib.request.urlretrieve(hostsfile, "hosts")
+    else:
+        modification_time = os.path.getmtime(localhostsfile)
+        if datetime.now() - datetime.fromtimestamp(modification_time) > timedelta(days=30):
+            logger.debug("hostsfile too old - downloading {} again", hostsfile)
+            urllib.request.urlretrieve(hostsfile, "hosts")
     if not tag:
         tag = urlparse(url).netloc
     logger.debug("using tag: {} - doublecheck enabled: {}", tag, str(doublecheck))
