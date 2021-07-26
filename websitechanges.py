@@ -25,6 +25,13 @@ const fs = require('fs');
 
 const puppeteer = require('puppeteer');
 
+process.on('unhandledRejection', function(err) {
+    console.log('unhandledRejection caught:');
+    console.log(err);
+    throw Error('unhandledRejection caught.');
+    //process.exit(1);
+});
+
 hosts = {};
 //now we read the host file
 var hostFile = fs.readFileSync('hosts', 'utf8').split('\n');
@@ -65,6 +72,7 @@ for (var i = 0; i < hostFile.length; i++) {
     page.setViewport({ width: 1000, height: 1000, deviceScaleFactor: 1 });
 
     await page.goto(process.argv[2], { waitUntil: 'networkidle2' });
+
     // get rid of cookie consent pop-ups
     // thanks to: https://stackoverflow.com/questions/59618456/pupeteer-how-can-i-accept-cookie-consent-prompts-automatically-for-any-url
     await page.evaluate(_ => {
