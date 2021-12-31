@@ -1,10 +1,12 @@
 import sys
 import os
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+from datetime import timedelta
 import urllib.request
 from urllib.parse import urlparse
 
@@ -24,6 +26,13 @@ const fs = require('fs');
 
 const puppeteer = require('puppeteer');
 
+process.on('unhandledRejection', function(err) {
+    console.log('unhandledRejection caught:');
+    console.log(err);
+    throw Error('unhandledRejection caught.');
+    //process.exit(1);
+});
+
 hosts = {};
 //now we read the host file
 var hostFile = fs.readFileSync('hosts', 'utf8').split('\n');
@@ -42,7 +51,8 @@ for (var i = 0; i < hostFile.length; i++) {
 
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
-    await page.setRequestInterception(true)
+    await page.setDefaultNavigationTimeout(0);
+    await page.setRequestInterception(true);
 
     page.on('request', request => {
 
@@ -63,21 +73,21 @@ for (var i = 0; i < hostFile.length; i++) {
     page.setViewport({ width: 1000, height: 1000, deviceScaleFactor: 1 });
 
     await page.goto(process.argv[2], { waitUntil: 'networkidle2' });
+
     // get rid of cookie consent pop-ups
     // thanks to: https://stackoverflow.com/questions/59618456/pupeteer-how-can-i-accept-cookie-consent-prompts-automatically-for-any-url
+    let clicked = false;
     await page.evaluate(_ => {
         var xcc
         // ids
         var xcc_id = [
             'cookie-apply-all',
             'cookie-settings-all',
+            'widget-vrt-cookiebalk3__button',
             // add ids here
         ];
-        for (let i = 0; i < xcc_id.length; i++) {
-            xcc = document.getElementById(xcc_id[i]);
-            if (xcc != null) {
-                xcc.click();
-            }
+        for (let i = 0; i < xcc_id.length; i++) { xcc = document.getElementById(xcc_id[i]);
+            if (xcc != null) { xcc.click(); clicked = true;}
         }
         // classes
         var xcc_class = [
@@ -87,23 +97,24 @@ for (var i = 0; i < hostFile.length; i++) {
             'js-confirm-button',
             // add classes here
         ];
-        for (let i = 0; i < xcc_class.length; i++) {
-            xcc = document.getElementsByClassName(xcc_class[i]);
-            if (xcc != null && xcc.length != 0) {
-                xcc[0].click();
-            }
+        for (let i = 0; i < xcc_class.length; i++) { xcc = document.getElementsByClassName(xcc_class[i]);
+            if (xcc != null && xcc.length != 0) { xcc[0].click(); clicked = true; }
         }
     
         // custom data attributes
-        xcc = document.querySelectorAll('button[name=accept_cookie]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
-        xcc = document.querySelectorAll('[data-cookieman-accept-all]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); }
+        xcc = document.querySelectorAll('button[name=accept_cookie]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); clicked = true; }
+        xcc = document.querySelectorAll('[data-cookieman-accept-all]'); if (xcc != null && xcc.length != 0) { xcc[0].click(); clicked = true; }
+        xcc = document.querySelectorAll('form[action*="consent"]'); if (xcc != null && xcc.length != 0) { xcc[0].submit(); clicked = true; } // youtube consent form
 
          // hide iframes, can't eval
         xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length != 0) { xcc[0].style.display = 'none'; }
         xcc = document.querySelectorAll("iframe[src*=eurocookie]"); if (xcc != null && xcc.length > 1) { xcc[1].style.display = 'none'; }
-    
+    }).catch((err) => {
+        console.log('!!! await cookies exception caught:');
+        console.log(err.message);
     });
     await page.waitForTimeout(5000);
+    if(clicked) { await page.waitForTimeout(10000); }
 
     if (process.argv[4] == 'full') {
         await page.screenshot({
@@ -135,8 +146,10 @@ for (var i = 0; i < hostFile.length; i++) {
             return { left: x, top: y, width, height, id: element.id };
         }, selector);
 
-        if (!rect)
-            throw Error(`Could not find element that matches selector: ${selector}.`);
+        if (!rect) {
+            await page.screenshot({path, fullPage: true})
+            throw Error(`Could not find element that matches selector: ${opts.selector} - full page captured instead.`);
+        }
 
         return await page.screenshot({
             path,
@@ -147,7 +160,8 @@ for (var i = 0; i < hostFile.length; i++) {
                 height: rect.height + padding * 2
             }
         }).catch((err) => {
-            console.log('await page.screenshot exception caught!');
+            console.log('!!! await page.screenshot exception caught:');
+            console.log(err.message);
         });
     }
 
@@ -156,7 +170,8 @@ for (var i = 0; i < hostFile.length; i++) {
         selector: process.argv[4],
         padding: 0
     }).catch((err) => {
-        console.log('await screenshotDOMElement exception caught!');
+        console.log('!!! await screenshotDOMElement exception caught:');
+        console.log(err.message);
     });
 
     browser.close();
@@ -252,7 +267,9 @@ def send_email(smtpemail, smtppass, to, subject, body, imgname):
 @click.option("--smtppass", default="", help="SMTP email password")
 @click.option("--threshold", default=1.0, help="threshold for sending email")
 @click.option("--tag", default="", help="tag to be used in email header")
-def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
+@click.option("--doublecheck", is_flag=True, default=False, help="double-check when a new change was detected, to avoid false alarms")
+def run(folder, url, css, to, smtpemail, smtppass, threshold, tag, doublecheck):
+    logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     logger.debug("changing dir to {}", folder)
     os.chdir(folder)
     with open("index.js", "w") as f:
@@ -260,37 +277,64 @@ def run(folder, url, css, to, smtpemail, smtppass, threshold, tag):
     if not os.path.exists(os.path.join("node_modules", "puppeteer")):
         logger.debug("installing puppeteer in {}", os.path.abspath("."))
         os.system("npm i puppeteer")
-    if not os.path.exists(os.path.join("hosts")):
+    localhostsfile = os.path.join("hosts")
+    if not os.path.exists(localhostsfile):
         logger.debug("downloading hosts file {}", hostsfile)
         urllib.request.urlretrieve(hostsfile, "hosts")
+    else:
+        modification_time = os.path.getmtime(localhostsfile)
+        if datetime.now() - datetime.fromtimestamp(modification_time) > timedelta(days=30):
+            logger.debug("hostsfile too old - downloading {} again", hostsfile)
+            urllib.request.urlretrieve(hostsfile, "hosts")
     if not tag:
         tag = urlparse(url).netloc
-    logger.debug("using tag: {}", tag)
+    logger.debug("using tag: {} - doublecheck enabled: {}", tag, str(doublecheck))
     new_png = tag + "_new.png"
     last_png = tag + "_last.png"
     after_jpg = tag + "_after.jpg"
-    node_cmd = "node index.js " + url + " " + new_png + " '" + css + "'"
-    logger.debug(node_cmd)
-    os.system(node_cmd)
+    loopCount = 1
+    if doublecheck:
+        loopCount = 2
+    for x in range(loopCount):
+        node_cmd = "node index.js " + url + " " + new_png + " '" + css + "'"
+        logger.debug(node_cmd)
+        
+        os.system(node_cmd)
+        if not os.path.exists(new_png):
+            # no new screenshot; abort
+            logger.debug("Aborting - no new screenshot available to compare!")
+            break
+        if os.path.exists(last_png):
+            logger.debug("comparing images")
+            similarity = compare_images(last_png, new_png, after_jpg)
+            logger.debug("similarity: {}", similarity)
+            if similarity < threshold and smtpemail != "" and smtppass != "" and to != "":
+                if doublecheck and x == 0:
+                    # first try, re-check
+                    logger.debug(" +++++++++++++++++++++ similarity < " + str(threshold) + ", will double-check +++++++++++++++++++++")
+                    time.sleep(90)
+                    continue
+                logger.debug("similarity < " + str(threshold) + ", sending email")
+                logger.debug(os.path.join(os.path.abspath("."), after_jpg))
+                subj = "Change detected for " + tag + " @ " + datetime.now().strftime("%m/%d/%Y %H:%M") + " #WebChange"
+                body_txt = url + "\nImage similarity: " + str(similarity) + "\n"
+                send_email(
+                    smtpemail,
+                    smtppass,
+                    to,
+                    subj,
+                    body_txt,
+                    os.path.join(os.path.abspath("."), after_jpg)
+                )
+            else:
+                # no change, we're done
+                break
+
     if os.path.exists(last_png):
-        logger.debug("comparing images")
-        similarity = compare_images(last_png, new_png, after_jpg)
-        logger.debug("similarity: {}", similarity)
-        if similarity < threshold and smtpemail != "" and smtppass != "" and to != "":
-            logger.debug("similarity < " + str(threshold) + ", sending email")
-            logger.debug(os.path.join(os.path.abspath("."), after_jpg))
-            subj = "Change detected for " + tag + " @ " + datetime.now().strftime("%m/%d/%Y %H:%M")
-            send_email(
-                smtpemail,
-                smtppass,
-                to,
-                subj,
-                url,
-                os.path.join(os.path.abspath("."), after_jpg),
-            )
         os.remove(last_png)
-    logger.debug("saving new image")
-    os.rename(new_png, last_png)
+    if os.path.exists(new_png):
+        logger.debug("saving new image")
+        os.rename(new_png, last_png)
 
 
 if __name__ == "__main__":
